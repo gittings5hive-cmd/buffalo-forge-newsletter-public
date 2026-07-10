@@ -2,7 +2,7 @@
   "_comment": "Buffalo Forge & Foundry brand config, derived from branding/Buffalo Forge Branding Page FINAL.png -- the Master Branding image (and the script logo cropped from branding/logo2.png). Colors/fonts/buttons are the guide's real values. Where the guide didn't specify something (status 'good', page-background tint, dark-mode steps), the derivation is noted per field.",
   "logo_path": "tools/assets/logo/buffalo-forge-script-bison.png",
   "logo_on_dark_band": true,
-  "vercel_project_name": "buffalo-forge-newsletter",
+  "vercel_project_prefix": "buffalo-forge-newsletter",
   "github_hosting": {
     "_comment": "Durable, full-resolution hosting for real photos and generated chart PNGs (and the logo). Vercel's deploy_to_vercel tool only accepts inline file bytes in the tool call itself, and transcribing long base64 image data into a tool call is unreliable at real photo sizes -- see workflows/write_newsletter.md's notes. So images/charts/logo are never uploaded to Vercel at all; they're committed to this public repo and referenced by raw.githubusercontent.com URL instead, which render_newsletter.py builds automatically per issue (owner/repo/branch here, plus <repo_asset_root>/<slug>-<issue_date>/{images,charts}/ per issue, and logo_path above). tools/publish_newsletter_assets.py does the actual copy+commit+push.",
     "owner": "gittings5hive-cmd",
