@@ -1,27 +1,34 @@
 #!/usr/bin/env python
 """Render a newsletter issue's content.json into web or email HTML.
 
-Two variants share one content.json and one brand config:
+Photos, chart PNGs, and the brand logo always resolve to permanent
+raw.githubusercontent.com URLs (per tools/brand.json's github_hosting block),
+regardless of variant -- run tools/publish_newsletter_assets.py first so
+those URLs actually resolve (see that script's docstring). This is topic-
+agnostic: the per-issue path is derived from content.json's own
+meta.slug/meta.issue_date, nothing is hardcoded per topic.
 
-  --variant web    relative asset paths (works standalone or deployed
-                    alongside charts/ and assets/ folders), full light/dark
+--base-url has a narrower job now: it only controls the page's own "Read the
+Full Issue" link target (web_url), since that's the one thing that
+genuinely doesn't exist until the page is deployed somewhere.
+
+  --variant web    --base-url "." before a deploy exists (no CTA link yet),
+                    or the real deploy URL once one exists. Full light/dark
                     theming.
-  --variant email   requires an absolute --base-url (email HTML has no
-                    "relative to this file" concept), single-theme (light)
-                    styling, and gets piped through premailer to inline all
-                    CSS -- Outlook and other clients need every style on the
-                    tag itself, not in a <style> block.
+  --variant email   requires an absolute --base-url (the deploy URL, for the
+                    CTA link -- email HTML has no "relative to this file"
+                    concept), single-theme (light) styling, and gets piped
+                    through premailer to inline all CSS -- Outlook and other
+                    clients need every style on the tag itself, not in a
+                    <style> block.
 
---base-url is the deploy ROOT, not a path to any one asset directory: charts
-resolve to "<base-url>/charts/<id>.png", real photos to
-"<base-url>/images/<id>.jpg", and the brand logo to
-"<base-url>/assets/logo.png" (or bare relative paths when --base-url is ".").
-
-Run once per variant, in this order: web first (relative paths, safe to
-render before anything is deployed), then deploy, then email (now that a
-real deploy URL exists).
+Run once per variant, in this order: publish assets, web (relative CTA is
+fine pre-deploy), deploy, then email (now that a real deploy URL exists for
+the CTA link).
 
 Usage:
+    python tools/publish_newsletter_assets.py --content ISSUE_DIR/content.json
+
     python tools/render_newsletter.py --content ISSUE_DIR/content.json \\
         --brand tools/brand.json --variant web \\
         --base-url . --out ISSUE_DIR/web.html
@@ -154,15 +161,37 @@ def load_brand(brand_path):
     return json.loads(Path(brand_path).read_text(encoding="utf-8"))
 
 
-def resolve_asset_url(base_url, relative_path):
-    if base_url == ".":
-        return relative_path
-    return f"{base_url.rstrip('/')}/{relative_path}"
+def get_github_hosting(brand):
+    github_cfg = brand.get("github_hosting")
+    if not github_cfg:
+        raise SystemExit(
+            "brand.json is missing a 'github_hosting' block -- required to "
+            "resolve photo/chart/logo URLs. See tools/brand.json's "
+            "github_hosting field for the expected shape "
+            "(owner/repo/branch/repo_asset_root)."
+        )
+    return github_cfg
 
 
-def build_charts_by_id(content, charts_dir, base_url):
+def resolve_github_raw_url(github_cfg, repo_relative_path):
+    owner = github_cfg["owner"]
+    repo = github_cfg["repo"]
+    branch = github_cfg.get("branch", "main")
+    return f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{repo_relative_path}"
+
+
+def issue_asset_root(github_cfg, meta):
+    """Repo-relative folder this issue's images/charts get published under
+    by publish_newsletter_assets.py -- derived from the issue's own slug and
+    date, so it's identical per topic with no hardcoding."""
+    prefix = github_cfg.get("repo_asset_root", "newsletter-assets")
+    return f"{prefix}/{meta.slug}-{meta.issue_date}"
+
+
+def build_charts_by_id(content, charts_dir, github_cfg):
     """Resolve each chart to a display-ready {src, width, height, title, source}."""
     sources_by_id = {s.id: s for s in content.sources}
+    asset_root = issue_asset_root(github_cfg, content.meta)
     charts_by_id = {}
     for chart in content.charts:
         png_path = charts_dir / f"{chart.id}.png"
@@ -177,7 +206,7 @@ def build_charts_by_id(content, charts_dir, base_url):
         display_height = round(display_width * native_height / native_width)
 
         charts_by_id[chart.id] = {
-            "src": resolve_asset_url(base_url, f"charts/{chart.id}.png"),
+            "src": resolve_github_raw_url(github_cfg, f"{asset_root}/charts/{chart.id}.png"),
             "width": display_width,
             "height": display_height,
             "title": chart.title,
@@ -187,13 +216,14 @@ def build_charts_by_id(content, charts_dir, base_url):
     return charts_by_id
 
 
-def build_images_by_id(content, images_dir, base_url):
+def build_images_by_id(content, images_dir, github_cfg):
     """Resolve each real photo to a display-ready {src, width, height, caption, source}.
 
     Unlike charts (always PNG, generated by generate_chart.py), photos arrive
     pre-made (e.g. video stills) so either .jpg or .png is accepted.
     """
     sources_by_id = {s.id: s for s in content.sources}
+    asset_root = issue_asset_root(github_cfg, content.meta)
     images_by_id = {}
     for photo in content.images:
         image_path = None
@@ -213,7 +243,7 @@ def build_images_by_id(content, images_dir, base_url):
         display_height = round(display_width * native_height / native_width)
 
         images_by_id[photo.id] = {
-            "src": resolve_asset_url(base_url, f"images/{image_path.name}"),
+            "src": resolve_github_raw_url(github_cfg, f"{asset_root}/images/{image_path.name}"),
             "width": display_width,
             "height": display_height,
             "caption": photo.caption,
@@ -223,9 +253,9 @@ def build_images_by_id(content, images_dir, base_url):
     return images_by_id
 
 
-def build_logo(brand, base_url):
-    """Resolve the brand logo the same way as chart images -- deployed at a
-    fixed `assets/logo.png` path regardless of the source file's own name."""
+def build_logo(brand, github_cfg):
+    """Resolve the brand logo to its raw.githubusercontent.com URL --
+    logo_path is already a repo-relative path, so no per-issue folder."""
     logo_path = brand.get("logo_path")
     if not logo_path:
         return None
@@ -237,7 +267,7 @@ def build_logo(brand, base_url):
     display_height = LOGO_DISPLAY_HEIGHT
     display_width = round(display_height * native_width / native_height)
     return {
-        "src": resolve_asset_url(base_url, "assets/logo.png"),
+        "src": resolve_github_raw_url(github_cfg, logo_path),
         "width": display_width,
         "height": display_height,
         "on_dark_band": brand.get("logo_on_dark_band", False),
@@ -251,15 +281,17 @@ def render(content_path, brand_path, variant, base_url, out_path):
     if variant == "email" and (base_url in (".", "") or not base_url.startswith("http")):
         raise SystemExit(
             "--variant email requires an absolute --base-url "
-            "(e.g. https://your-deploy.vercel.app) -- email HTML has no "
-            "concept of a path relative to the message itself."
+            "(e.g. https://your-deploy.vercel.app) -- it's used for the "
+            "'Read the Full Issue' link; email HTML has no concept of a "
+            "path relative to the message itself."
         )
 
+    github_cfg = get_github_hosting(brand)
     charts_dir = Path(content_path).parent / "charts"
     images_dir = Path(content_path).parent / "images"
-    charts_by_id = build_charts_by_id(content, charts_dir, base_url)
-    images_by_id = build_images_by_id(content, images_dir, base_url)
-    logo = build_logo(brand, base_url)
+    charts_by_id = build_charts_by_id(content, charts_dir, github_cfg)
+    images_by_id = build_images_by_id(content, images_dir, github_cfg)
+    logo = build_logo(brand, github_cfg)
 
     env = Environment(
         loader=FileSystemLoader(str(TEMPLATES_DIR)),
@@ -322,9 +354,12 @@ def main():
     parser.add_argument(
         "--base-url",
         required=True,
-        help='"." for web (relative to charts/ and assets/ folders next to the output), '
-        "or the absolute deployed root URL for email "
-        "(charts resolve to <base-url>/charts/<id>.png, logo to <base-url>/assets/logo.png)",
+        help='Only controls the "Read the Full Issue" CTA link target -- '
+        "images/charts/logo always resolve to raw.githubusercontent.com "
+        "regardless of this value (see github_hosting in brand.json). "
+        'Use "." before a deploy exists (no CTA link), or the deployed '
+        "root URL once one exists (required, and must be absolute, for "
+        "--variant email).",
     )
     parser.add_argument("--out", required=True, help="Output HTML path")
     args = parser.parse_args()
