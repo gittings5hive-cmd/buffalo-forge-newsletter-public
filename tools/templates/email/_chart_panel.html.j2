@@ -1,0 +1,9 @@
+{% set chart = charts_by_id[block.chart_id] %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:{{ colors_light.surface }};border:1px solid {{ colors_light.border }};border-radius:{{ layout.card_radius_px }}px;">
+  <tr>
+    <td style="padding:16px;">
+      <img src="{{ chart.src }}" width="{{ chart.width }}" height="{{ chart.height }}" alt="{{ chart.title or 'Chart' }}" style="display:block;width:100%;max-width:{{ chart.width }}px;height:auto;border-radius:2px;">
+      {% if chart.source %}<p class="chart-caption">Source: {{ chart.source.publisher or chart.source.title }}</p>{% endif %}
+    </td>
+  </tr>
+</table>

@@ -1,0 +1,10 @@
+{% set tone_color = status_light.good if block.tone == "positive" else (status_light.critical if block.tone == "negative" else colors_light.accent) %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:{{ colors_light.surface }};border:1px solid {{ colors_light.border }};border-left:4px solid {{ tone_color }};border-radius:{{ layout.card_radius_px }}px;">
+  <tr>
+    <td style="padding:14px 18px;">
+      <span class="stat-value">{{ block.value }}</span>
+      &nbsp;&nbsp;
+      <span class="stat-label">{{ block.label }}</span>
+    </td>
+  </tr>
+</table>

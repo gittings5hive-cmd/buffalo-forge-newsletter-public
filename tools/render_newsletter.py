@@ -1,0 +1,337 @@
+#!/usr/bin/env python
+"""Render a newsletter issue's content.json into web or email HTML.
+
+Two variants share one content.json and one brand config:
+
+  --variant web    relative asset paths (works standalone or deployed
+                    alongside charts/ and assets/ folders), full light/dark
+                    theming.
+  --variant email   requires an absolute --base-url (email HTML has no
+                    "relative to this file" concept), single-theme (light)
+                    styling, and gets piped through premailer to inline all
+                    CSS -- Outlook and other clients need every style on the
+                    tag itself, not in a <style> block.
+
+--base-url is the deploy ROOT, not a path to any one asset directory: charts
+resolve to "<base-url>/charts/<id>.png", real photos to
+"<base-url>/images/<id>.jpg", and the brand logo to
+"<base-url>/assets/logo.png" (or bare relative paths when --base-url is ".").
+
+Run once per variant, in this order: web first (relative paths, safe to
+render before anything is deployed), then deploy, then email (now that a
+real deploy URL exists).
+
+Usage:
+    python tools/render_newsletter.py --content ISSUE_DIR/content.json \\
+        --brand tools/brand.json --variant web \\
+        --base-url . --out ISSUE_DIR/web.html
+
+    python tools/render_newsletter.py --content ISSUE_DIR/content.json \\
+        --brand tools/brand.json --variant email \\
+        --base-url https://your-deploy.vercel.app \\
+        --out ISSUE_DIR/email.html
+"""
+import argparse
+import json
+import logging
+from pathlib import Path
+from typing import Annotated, List, Literal, Optional, Union
+
+from jinja2 import Environment, FileSystemLoader, StrictUndefined
+from PIL import Image
+from pydantic import BaseModel, Field, ValidationError
+
+TEMPLATES_DIR = Path(__file__).parent / "templates"
+PROJECT_ROOT = Path(__file__).parent.parent
+CHART_DISPLAY_WIDTH = 600
+LOGO_DISPLAY_HEIGHT = 56
+
+
+# ---------------------------------------------------------------------------
+# content.json schema -- validated up front so a malformed research/synthesis
+# step fails with one specific field error instead of a confusing template
+# KeyError three steps later.
+# ---------------------------------------------------------------------------
+
+class Meta(BaseModel):
+    topic: str
+    slug: str
+    issue_date: str
+    title: str
+    subtitle: Optional[str] = None
+
+
+class Hero(BaseModel):
+    eyebrow: Optional[str] = None
+    summary: str
+
+
+class ParagraphBlock(BaseModel):
+    type: Literal["paragraph"]
+    text: str
+
+
+class ChartBlock(BaseModel):
+    type: Literal["chart"]
+    chart_id: str
+
+
+class StatCalloutBlock(BaseModel):
+    type: Literal["stat_callout"]
+    value: str
+    label: str
+    tone: Literal["positive", "negative", "neutral"] = "neutral"
+
+
+class QuoteBlock(BaseModel):
+    type: Literal["quote"]
+    text: str
+    attribution: Optional[str] = None
+
+
+class ImageBlock(BaseModel):
+    type: Literal["image"]
+    image_id: str
+
+
+Block = Annotated[
+    Union[ParagraphBlock, ChartBlock, StatCalloutBlock, QuoteBlock, ImageBlock],
+    Field(discriminator="type"),
+]
+
+
+class Section(BaseModel):
+    id: str
+    heading: str
+    blocks: List[Block]
+
+
+class Chart(BaseModel):
+    id: str
+    type: Literal["bar", "line"]
+    title: Optional[str] = None
+    subtitle: Optional[str] = None
+    unit: str = ""
+    data: List[dict]
+    source_id: Optional[str] = None
+
+
+class Source(BaseModel):
+    id: str
+    title: str
+    url: str
+    publisher: Optional[str] = None
+    accessed_date: Optional[str] = None
+
+
+class Photo(BaseModel):
+    """A real photo (e.g. a video still), as opposed to a generated chart."""
+
+    id: str
+    caption: Optional[str] = None
+    alt: Optional[str] = None
+    source_id: Optional[str] = None
+
+
+class Content(BaseModel):
+    meta: Meta
+    hero: Hero
+    sections: List[Section]
+    charts: List[Chart] = []
+    images: List[Photo] = []
+    sources: List[Source] = []
+
+
+def load_content(content_path):
+    raw = json.loads(Path(content_path).read_text(encoding="utf-8"))
+    try:
+        return Content.model_validate(raw)
+    except ValidationError as exc:
+        raise SystemExit(f"content.json failed validation:\n{exc}")
+
+
+def load_brand(brand_path):
+    return json.loads(Path(brand_path).read_text(encoding="utf-8"))
+
+
+def resolve_asset_url(base_url, relative_path):
+    if base_url == ".":
+        return relative_path
+    return f"{base_url.rstrip('/')}/{relative_path}"
+
+
+def build_charts_by_id(content, charts_dir, base_url):
+    """Resolve each chart to a display-ready {src, width, height, title, source}."""
+    sources_by_id = {s.id: s for s in content.sources}
+    charts_by_id = {}
+    for chart in content.charts:
+        png_path = charts_dir / f"{chart.id}.png"
+        if not png_path.exists():
+            raise SystemExit(
+                f"Chart PNG not found: {png_path}. Run generate_chart.py for "
+                f"chart id {chart.id!r} before rendering."
+            )
+        with Image.open(png_path) as img:
+            native_width, native_height = img.size
+        display_width = min(CHART_DISPLAY_WIDTH, native_width)
+        display_height = round(display_width * native_height / native_width)
+
+        charts_by_id[chart.id] = {
+            "src": resolve_asset_url(base_url, f"charts/{chart.id}.png"),
+            "width": display_width,
+            "height": display_height,
+            "title": chart.title,
+            "subtitle": chart.subtitle,
+            "source": sources_by_id.get(chart.source_id) if chart.source_id else None,
+        }
+    return charts_by_id
+
+
+def build_images_by_id(content, images_dir, base_url):
+    """Resolve each real photo to a display-ready {src, width, height, caption, source}.
+
+    Unlike charts (always PNG, generated by generate_chart.py), photos arrive
+    pre-made (e.g. video stills) so either .jpg or .png is accepted.
+    """
+    sources_by_id = {s.id: s for s in content.sources}
+    images_by_id = {}
+    for photo in content.images:
+        image_path = None
+        for ext in (".jpg", ".jpeg", ".png"):
+            candidate = images_dir / f"{photo.id}{ext}"
+            if candidate.exists():
+                image_path = candidate
+                break
+        if image_path is None:
+            raise SystemExit(
+                f"Image file not found for id {photo.id!r} in {images_dir} "
+                "(expected a .jpg or .png)."
+            )
+        with Image.open(image_path) as img:
+            native_width, native_height = img.size
+        display_width = min(CHART_DISPLAY_WIDTH, native_width)
+        display_height = round(display_width * native_height / native_width)
+
+        images_by_id[photo.id] = {
+            "src": resolve_asset_url(base_url, f"images/{image_path.name}"),
+            "width": display_width,
+            "height": display_height,
+            "caption": photo.caption,
+            "alt": photo.alt or photo.caption or "Photo",
+            "source": sources_by_id.get(photo.source_id) if photo.source_id else None,
+        }
+    return images_by_id
+
+
+def build_logo(brand, base_url):
+    """Resolve the brand logo the same way as chart images -- deployed at a
+    fixed `assets/logo.png` path regardless of the source file's own name."""
+    logo_path = brand.get("logo_path")
+    if not logo_path:
+        return None
+    full_path = PROJECT_ROOT / logo_path
+    if not full_path.exists():
+        raise SystemExit(f"brand logo_path not found: {full_path}")
+    with Image.open(full_path) as img:
+        native_width, native_height = img.size
+    display_height = LOGO_DISPLAY_HEIGHT
+    display_width = round(display_height * native_width / native_height)
+    return {
+        "src": resolve_asset_url(base_url, "assets/logo.png"),
+        "width": display_width,
+        "height": display_height,
+        "on_dark_band": brand.get("logo_on_dark_band", False),
+    }
+
+
+def render(content_path, brand_path, variant, base_url, out_path):
+    content = load_content(content_path)
+    brand = load_brand(brand_path)
+
+    if variant == "email" and (base_url in (".", "") or not base_url.startswith("http")):
+        raise SystemExit(
+            "--variant email requires an absolute --base-url "
+            "(e.g. https://your-deploy.vercel.app) -- email HTML has no "
+            "concept of a path relative to the message itself."
+        )
+
+    charts_dir = Path(content_path).parent / "charts"
+    images_dir = Path(content_path).parent / "images"
+    charts_by_id = build_charts_by_id(content, charts_dir, base_url)
+    images_by_id = build_images_by_id(content, images_dir, base_url)
+    logo = build_logo(brand, base_url)
+
+    env = Environment(
+        loader=FileSystemLoader(str(TEMPLATES_DIR)),
+        undefined=StrictUndefined,
+        trim_blocks=True,
+        lstrip_blocks=True,
+        autoescape=True,
+    )
+
+    status = {k: v for k, v in brand["colors"]["status"].items() if not k.startswith("_")}
+    context = {
+        "meta": content.meta,
+        "hero": content.hero,
+        "sections": content.sections,
+        "sources": content.sources,
+        "charts_by_id": charts_by_id,
+        "images_by_id": images_by_id,
+        "logo": logo,
+        "web_url": base_url if base_url != "." else None,
+        "colors_light": brand["colors"]["light"],
+        "colors_dark": brand["colors"]["dark"],
+        "status_light": {name: tones["light"] for name, tones in status.items()},
+        "status_dark": {name: tones["dark"] for name, tones in status.items()},
+        "fonts": brand["fonts"],
+        "layout": brand["layout"],
+        "buttons": brand.get("buttons"),
+    }
+
+    template_name = "web.html.j2" if variant == "web" else "email.html.j2"
+    html = env.get_template(template_name).render(**context)
+
+    if variant == "email":
+        from premailer import Premailer
+        import cssutils
+
+        cssutils.log.setLevel(logging.CRITICAL)
+        # premailer unconditionally copies inline width/height CSS onto the
+        # HTML attributes (force=True internally) -- without this, our
+        # deliberate pixel width/height attributes (Outlook's fallback when it
+        # ignores CSS max-width) get clobbered with the literal "100%"/"auto"
+        # strings from the responsive img style.
+        html = Premailer(
+            html,
+            keep_style_tags=False,
+            disable_validation=True,
+            disable_basic_attributes=["width", "height"],
+        ).transform()
+
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(html, encoding="utf-8")
+    return out_path
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--content", required=True, help="Path to the issue's content.json")
+    parser.add_argument("--brand", default="tools/brand.json", help="Path to a brand config JSON")
+    parser.add_argument("--variant", required=True, choices=["web", "email"])
+    parser.add_argument(
+        "--base-url",
+        required=True,
+        help='"." for web (relative to charts/ and assets/ folders next to the output), '
+        "or the absolute deployed root URL for email "
+        "(charts resolve to <base-url>/charts/<id>.png, logo to <base-url>/assets/logo.png)",
+    )
+    parser.add_argument("--out", required=True, help="Output HTML path")
+    args = parser.parse_args()
+
+    out_path = render(args.content, args.brand, args.variant, args.base_url, args.out)
+    print(f"Wrote {out_path}")
+
+
+if __name__ == "__main__":
+    main()

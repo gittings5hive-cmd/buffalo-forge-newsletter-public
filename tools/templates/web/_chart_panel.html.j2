@@ -1,0 +1,5 @@
+{% set chart = charts_by_id[block.chart_id] %}
+<div class="chart-panel">
+  <img src="{{ chart.src }}" width="{{ chart.width }}" height="{{ chart.height }}" alt="{{ chart.title or 'Chart' }}">
+  {% if chart.source %}<p class="chart-caption">Source: {{ chart.source.publisher or chart.source.title }}</p>{% endif %}
+</div>

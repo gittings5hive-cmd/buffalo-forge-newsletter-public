@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>{{ meta.title }}</title>
+<!--[if mso]>
+<noscript>
+<xml>
+<o:OfficeDocumentSettings>
+<o:PixelsPerInch>96</o:PixelsPerInch>
+</o:OfficeDocumentSettings>
+</xml>
+</noscript>
+<style>
+  table { border-collapse: collapse; }
+</style>
+<![endif]-->
+<style>
+  body, table, td, a { font-family: {{ fonts.body.email_font_stack }}; }
+  body { margin: 0; padding: 0; background: {{ colors_light.page }}; }
+  img { border: 0; }
+  .eyebrow { font-family: {{ fonts.accent.email_font_stack }}; text-transform: uppercase; letter-spacing: 1px; font-size: 12px; font-weight: bold; color: {{ colors_light.accent }}; }
+  h1 { font-family: {{ fonts.heading.email_font_stack }}; font-size: 26px; font-weight: 800; line-height: 1.25; margin: 0 0 10px; color: {{ colors_light.primary_ink }}; }
+  .subtitle { font-size: 16px; color: {{ colors_light.secondary_ink }}; margin: 0 0 16px; }
+  .summary { font-size: 15px; line-height: 1.6; color: {{ colors_light.primary_ink }}; }
+  .cta-button { font-family: {{ fonts.accent.email_font_stack }}; display: inline-block; padding: 12px 22px; background-color: {{ buttons.primary.background }}; color: {{ buttons.primary.text }} !important; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; font-size: 14px; text-decoration: none; border-radius: {{ buttons.radius_px }}px; }
+  h2 { font-family: {{ fonts.heading.email_font_stack }}; font-size: 19px; font-weight: 800; color: {{ colors_light.primary_ink }}; margin: 0; }
+  .body-text { font-size: 15px; line-height: 1.6; color: {{ colors_light.primary_ink }}; margin: 0; }
+  .chart-caption { font-family: {{ fonts.accent.email_font_stack }}; font-size: 12px; color: {{ colors_light.muted_ink }}; margin: 8px 0 0; }
+  .stat-value { font-family: {{ fonts.heading.email_font_stack }}; font-size: 26px; font-weight: 800; color: {{ colors_light.primary_ink }}; }
+  .stat-label { font-size: 14px; color: {{ colors_light.secondary_ink }}; }
+  .quote-text { font-size: 16px; font-style: italic; color: {{ colors_light.primary_ink }}; margin: 0; }
+  .quote-attribution { font-family: {{ fonts.accent.email_font_stack }}; font-size: 12px; color: {{ colors_light.muted_ink }}; margin: 8px 0 0; }
+  .sources-heading { font-family: {{ fonts.accent.email_font_stack }}; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: {{ colors_light.muted_ink }}; margin: 0 0 10px; }
+  .sources-list { font-size: 13px; color: {{ colors_light.secondary_ink }}; line-height: 1.7; margin: 0; padding-left: 18px; }
+  a { color: {{ colors_light.accent }}; }
+</style>
+</head>
+<body>
+<center>
+<!--[if mso]>
+<table role="presentation" width="{{ layout.max_width_email }}" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td>
+<![endif]-->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:{{ layout.max_width_email }}px;margin:0 auto;">
+  {% if logo %}
+  <tr>
+    <td style="background-color:{{ colors_dark.page }};padding:18px 24px;">
+      <img src="{{ logo.src }}" width="{{ logo.width }}" height="{{ logo.height }}" alt="Buffalo Forge &amp; Foundry" style="display:block;">
+    </td>
+  </tr>
+  {% endif %}
+  <tr>
+    <td style="padding:32px 24px;">
+
+      {% if hero.eyebrow %}<p class="eyebrow" style="margin:0 0 10px;">{{ hero.eyebrow }}</p>{% endif %}
+      <h1>{{ meta.title }}</h1>
+      {% if meta.subtitle %}<p class="subtitle">{{ meta.subtitle }}</p>{% endif %}
+      <p class="summary" style="padding-top:16px;border-top:1px solid {{ colors_light.border }};">{{ hero.summary }}</p>
+      {% if web_url %}
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:20px;">
+        <tr>
+          <td style="border-radius:{{ buttons.radius_px }}px;background-color:{{ buttons.primary.background }};">
+            <a class="cta-button" href="{{ web_url }}">Read the Full Issue</a>
+          </td>
+        </tr>
+      </table>
+      {% endif %}
+
+      {% for section in sections %}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:32px;">
+        <tr>
+          <td>
+            <h2>{{ section.heading }}</h2>
+          </td>
+        </tr>
+        {% for block in section.blocks %}
+        <tr>
+          <td style="padding-top:16px;">
+            {% if block.type == "paragraph" %}
+              <p class="body-text">{{ block.text }}</p>
+            {% elif block.type == "chart" %}
+              {% include "email/_chart_panel.html.j2" %}
+            {% elif block.type == "image" %}
+              {% include "email/_image_panel.html.j2" %}
+            {% elif block.type == "stat_callout" %}
+              {% include "email/_stat_card.html.j2" %}
+            {% elif block.type == "quote" %}
+              {% include "email/_quote_card.html.j2" %}
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </table>
+      {% endfor %}
+
+      {% if sources %}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:40px;padding-top:20px;border-top:1px solid {{ colors_light.border }};">
+        <tr>
+          <td>
+            <p class="sources-heading">Sources</p>
+            <ol class="sources-list">
+              {% for source in sources %}
+              <li><a href="{{ source.url }}">{{ source.title }}</a>{% if source.publisher %} &mdash; {{ source.publisher }}{% endif %}</li>
+              {% endfor %}
+            </ol>
+          </td>
+        </tr>
+      </table>
+      {% endif %}
+
+    </td>
+  </tr>
+</table>
+<!--[if mso]>
+</td></tr></table>
+<![endif]-->
+</center>
+</body>
+</html>

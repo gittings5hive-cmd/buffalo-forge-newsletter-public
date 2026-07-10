@@ -1,0 +1,5 @@
+{% set photo = images_by_id[block.image_id] %}
+<figure class="photo-panel">
+  <img src="{{ photo.src }}" width="{{ photo.width }}" height="{{ photo.height }}" alt="{{ photo.alt }}">
+  {% if photo.caption %}<figcaption class="photo-caption">{{ photo.caption }}</figcaption>{% endif %}
+</figure>

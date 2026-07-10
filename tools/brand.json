@@ -1,0 +1,79 @@
+{
+  "_comment": "Buffalo Forge & Foundry brand config, derived from branding/Buffalo Forge Branding Page FINAL.png -- the Master Branding image (and the script logo cropped from branding/logo2.png). Colors/fonts/buttons are the guide's real values. Where the guide didn't specify something (status 'good', page-background tint, dark-mode steps), the derivation is noted per field.",
+  "logo_path": "tools/assets/logo/buffalo-forge-script-bison.png",
+  "logo_on_dark_band": true,
+  "vercel_project_name": "buffalo-forge-newsletter",
+  "fonts": {
+    "_comment": "Three brand-specified roles. Email keeps one safe fallback stack per role (Arial/Helvetica) since condensed/geometric webfonts aren't reliably supported cross-client -- distinguish by weight/case there, not typeface.",
+    "heading": {
+      "family_name": "Montserrat",
+      "google_fonts_spec": "Montserrat:wght@700;800",
+      "web_font_stack": "'Montserrat', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif",
+      "email_font_stack": "Arial, Helvetica, sans-serif",
+      "weight": 800
+    },
+    "body": {
+      "family_name": "Source Sans Pro",
+      "google_fonts_spec": "Source+Sans+Pro:wght@400;600",
+      "web_font_stack": "'Source Sans Pro', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif",
+      "email_font_stack": "Arial, Helvetica, sans-serif",
+      "weight": 400,
+      "regular_path": "tools/assets/fonts/SourceSansPro-Regular.ttf",
+      "bold_path": "tools/assets/fonts/SourceSansPro-Bold.ttf"
+    },
+    "accent": {
+      "family_name": "Oswald",
+      "google_fonts_spec": "Oswald:wght@500;600",
+      "web_font_stack": "'Oswald', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif",
+      "email_font_stack": "Arial, Helvetica, sans-serif",
+      "weight": 600
+    }
+  },
+  "colors": {
+    "_comment": "surface/page/ink/accent are the guide's own named colors (section 4). Categorical is capped at 3 -- the dataviz skill's validator (scripts/validate_palette.js) confirmed Forge Orange + Molten Copper + Fire Gold pass CVD/lightness/chroma as a set, but adding the neutrals (black/gray/silver) fails the chroma-floor check (they read as gray, not as hued identity colors), and the brand simply has no 4th distinguishable hue. generate_chart.py already wraps the 3-color set with modulo and puts a direct value label on every mark, which is the validator-sanctioned relief for a floor-band palette.",
+    "light": {
+      "surface": "#FFFFFF",
+      "page": "#F4F5F6",
+      "primary_ink": "#1A1A1A",
+      "secondary_ink": "#55565A",
+      "muted_ink": "#A8ADB2",
+      "gridline": "#F8F8F9",
+      "baseline": "#A8ADB2",
+      "border": "rgba(85,86,90,0.16)",
+      "accent": "#D96A1A",
+      "categorical": ["#D96A1A", "#B44A22", "#DB9B2D"]
+    },
+    "dark": {
+      "_comment": "page/primary_ink are the guide's own hero-banner black/white. surface is a lifted charcoal for card separation (not a named brand color). secondary_ink swaps to Steel Silver vs. light mode since Iron Gray doesn't clear contrast on a near-black page. Fire Gold's categorical step is darkened (validator-driven) to clear the dark lightness band -- #DB9B2D was too light at L 0.734.",
+      "surface": "#242423",
+      "page": "#1A1A1A",
+      "primary_ink": "#FFFFFF",
+      "secondary_ink": "#A8ADB2",
+      "muted_ink": "#8B8D90",
+      "gridline": "#333331",
+      "baseline": "#55565A",
+      "border": "rgba(255,255,255,0.14)",
+      "accent": "#D96A1A",
+      "categorical": ["#D96A1A", "#B44A22", "#B47F25"]
+    },
+    "status": {
+      "_comment": "good/critical are the only tones the current templates actually render (stat_callout tone=positive/negative), so they're kept clean and distinct from the categorical set per the dataviz rule (status colors must never impersonate a series). Neither has a brand equivalent -- both are small new functional additions tuned to the industrial/warm mood. warning/serious are not wired into any template today, so they reuse Fire Gold and Molten Copper per the guide's own 'Callouts/Warnings' framing; revisit if a warning-tone UI element is ever added, since that would reintroduce the series/status collision.",
+      "good": {"light": "#3F7A3D", "dark": "#6FBF6B"},
+      "warning": {"light": "#DB9B2D", "dark": "#B47F25"},
+      "serious": {"light": "#B44A22", "dark": "#B44A22"},
+      "critical": {"light": "#A82A2A", "dark": "#C13B3B"}
+    }
+  },
+  "buttons": {
+    "_comment": "Section 7 of the brand guide, verbatim.",
+    "radius_px": 4,
+    "primary": {"background": "#D96A1A", "text": "#FFFFFF", "border": null},
+    "secondary": {"background": "#FFFFFF", "text": "#D96A1A", "border": "#D96A1A"},
+    "tertiary": {"background": "#1A1A1A", "text": "#FFFFFF", "border": null}
+  },
+  "layout": {
+    "max_width_web": 720,
+    "max_width_email": 640,
+    "card_radius_px": 6
+  }
+}

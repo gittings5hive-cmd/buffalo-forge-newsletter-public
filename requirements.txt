@@ -1,2 +1,6 @@
 python-dotenv
 requests
+Jinja2
+matplotlib
+premailer
+pydantic

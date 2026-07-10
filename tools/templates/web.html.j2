@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ meta.title }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family={{ fonts.heading.google_fonts_spec }}&family={{ fonts.body.google_fonts_spec }}&family={{ fonts.accent.google_fonts_spec }}&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --surface: {{ colors_light.surface }};
+    --page: {{ colors_light.page }};
+    --ink: {{ colors_light.primary_ink }};
+    --ink-2: {{ colors_light.secondary_ink }};
+    --ink-muted: {{ colors_light.muted_ink }};
+    --gridline: {{ colors_light.gridline }};
+    --border: {{ colors_light.border }};
+    --accent: {{ colors_light.accent }};
+    --good: {{ status_light.good }};
+    --critical: {{ status_light.critical }};
+    --max-width: {{ layout.max_width_web }}px;
+    --card-radius: {{ layout.card_radius_px }}px;
+    --font-heading: {{ fonts.heading.web_font_stack }};
+    --font-body: {{ fonts.body.web_font_stack }};
+    --font-accent: {{ fonts.accent.web_font_stack }};
+    --btn-radius: {{ buttons.radius_px }}px;
+    --btn-primary-bg: {{ buttons.primary.background }};
+    --btn-primary-text: {{ buttons.primary.text }};
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface: {{ colors_dark.surface }};
+      --page: {{ colors_dark.page }};
+      --ink: {{ colors_dark.primary_ink }};
+      --ink-2: {{ colors_dark.secondary_ink }};
+      --ink-muted: {{ colors_dark.muted_ink }};
+      --gridline: {{ colors_dark.gridline }};
+      --border: {{ colors_dark.border }};
+      --accent: {{ colors_dark.accent }};
+      --good: {{ status_dark.good }};
+      --critical: {{ status_dark.critical }};
+    }
+  }
+  :root[data-theme="dark"] {
+    --surface: {{ colors_dark.surface }};
+    --page: {{ colors_dark.page }};
+    --ink: {{ colors_dark.primary_ink }};
+    --ink-2: {{ colors_dark.secondary_ink }};
+    --ink-muted: {{ colors_dark.muted_ink }};
+    --gridline: {{ colors_dark.gridline }};
+    --border: {{ colors_dark.border }};
+    --accent: {{ colors_dark.accent }};
+    --good: {{ status_dark.good }};
+    --critical: {{ status_dark.critical }};
+  }
+  :root[data-theme="light"] {
+    --surface: {{ colors_light.surface }};
+    --page: {{ colors_light.page }};
+    --ink: {{ colors_light.primary_ink }};
+    --ink-2: {{ colors_light.secondary_ink }};
+    --ink-muted: {{ colors_light.muted_ink }};
+    --gridline: {{ colors_light.gridline }};
+    --border: {{ colors_light.border }};
+    --accent: {{ colors_light.accent }};
+    --good: {{ status_light.good }};
+    --critical: {{ status_light.critical }};
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+  .brand-band {
+    background: {{ colors_dark.page }};
+    padding: 18px 24px;
+  }
+  .brand-band-inner {
+    max-width: var(--max-width);
+    margin: 0 auto;
+  }
+  .brand-band img { display: block; height: auto; }
+  .wrap {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 48px 24px 64px;
+  }
+  .eyebrow {
+    font-family: var(--font-accent);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    margin: 0 0 12px;
+  }
+  h1 {
+    font-family: var(--font-heading);
+    font-size: clamp(28px, 4vw, 40px);
+    line-height: 1.15;
+    font-weight: 800;
+    margin: 0 0 12px;
+    text-wrap: balance;
+  }
+  .subtitle {
+    font-family: var(--font-body);
+    font-size: 18px;
+    color: var(--ink-2);
+    margin: 0 0 20px;
+    max-width: 60ch;
+  }
+  .summary {
+    font-family: var(--font-body);
+    font-size: 17px;
+    line-height: 1.6;
+    color: var(--ink);
+    max-width: 65ch;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+  .cta-button {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 12px 22px;
+    background: var(--btn-primary-bg);
+    color: var(--btn-primary-text);
+    border-radius: var(--btn-radius);
+    font-family: var(--font-accent);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 14px;
+    text-decoration: none;
+  }
+  .cta-button:hover { opacity: 0.9; }
+  header.hero { margin-bottom: 40px; }
+  section.block-section { margin: 40px 0; display: flex; flex-direction: column; gap: 20px; }
+  section.block-section h2 {
+    font-family: var(--font-heading);
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0;
+    text-wrap: balance;
+  }
+  p.body-text {
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--ink);
+    max-width: 65ch;
+    margin: 0;
+  }
+  .chart-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    padding: 20px;
+  }
+  .chart-panel img { display: block; max-width: 100%; height: auto; border-radius: 2px; }
+  .chart-caption {
+    font-family: var(--font-accent);
+    font-size: 13px;
+    color: var(--ink-muted);
+    margin: 10px 0 0;
+  }
+  .photo-panel {
+    margin: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    padding: 8px;
+  }
+  .photo-panel img { display: block; width: 100%; height: auto; border-radius: 2px; }
+  .photo-caption {
+    font-family: var(--font-accent);
+    font-size: 13px;
+    color: var(--ink-muted);
+    margin: 10px 6px 4px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--tone-color, var(--accent));
+    border-radius: var(--card-radius);
+    padding: 18px 22px;
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .stat-card .value {
+    font-family: var(--font-heading);
+    font-size: 32px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+  .stat-card .label { font-family: var(--font-body); font-size: 15px; color: var(--ink-2); }
+  .stat-card.tone-positive { --tone-color: var(--good); }
+  .stat-card.tone-negative { --tone-color: var(--critical); }
+  blockquote.pull-quote {
+    margin: 0;
+    padding: 4px 0 4px 20px;
+    border-left: 3px solid var(--accent);
+    font-family: var(--font-body);
+    font-size: 18px;
+    font-style: italic;
+    line-height: 1.5;
+    color: var(--ink);
+  }
+  blockquote.pull-quote p { margin: 0; }
+  blockquote.pull-quote cite {
+    display: block;
+    margin-top: 10px;
+    font-family: var(--font-accent);
+    font-size: 13px;
+    font-style: normal;
+    color: var(--ink-muted);
+  }
+  footer.sources {
+    margin-top: 56px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+  footer.sources h3 {
+    font-family: var(--font-accent);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-muted);
+    margin: 0 0 12px;
+    font-weight: 600;
+  }
+  footer.sources ol { margin: 0; padding-left: 20px; color: var(--ink-2); font-size: 14px; line-height: 1.8; }
+  footer.sources a { color: var(--accent); }
+  @media (prefers-reduced-motion: no-preference) {
+    .wrap { animation: fade-in 0.4s ease-out; }
+  }
+  @keyframes fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+</style>
+</head>
+<body>
+{% if logo %}
+<header class="brand-band">
+  <div class="brand-band-inner">
+    <img src="{{ logo.src }}" width="{{ logo.width }}" height="{{ logo.height }}" alt="Buffalo Forge & Foundry">
+  </div>
+</header>
+{% endif %}
+<div class="wrap">
+  <header class="hero">
+    {% if hero.eyebrow %}<p class="eyebrow">{{ hero.eyebrow }}</p>{% endif %}
+    <h1>{{ meta.title }}</h1>
+    {% if meta.subtitle %}<p class="subtitle">{{ meta.subtitle }}</p>{% endif %}
+    <p class="summary">{{ hero.summary }}</p>
+    {% if web_url %}<a class="cta-button" href="{{ web_url }}">Read the Full Issue</a>{% endif %}
+  </header>
+
+  {% for section in sections %}
+  <section class="block-section">
+    <h2>{{ section.heading }}</h2>
+    {% for block in section.blocks %}
+      {% if block.type == "paragraph" %}
+        <p class="body-text">{{ block.text }}</p>
+      {% elif block.type == "chart" %}
+        {% include "web/_chart_panel.html.j2" %}
+      {% elif block.type == "image" %}
+        {% include "web/_image_panel.html.j2" %}
+      {% elif block.type == "stat_callout" %}
+        {% include "web/_stat_card.html.j2" %}
+      {% elif block.type == "quote" %}
+        {% include "web/_quote_card.html.j2" %}
+      {% endif %}
+    {% endfor %}
+  </section>
+  {% endfor %}
+
+  {% if sources %}
+  <footer class="sources">
+    <h3>Sources</h3>
+    <ol>
+      {% for source in sources %}
+      <li><a href="{{ source.url }}">{{ source.title }}</a>{% if source.publisher %} &mdash; {{ source.publisher }}{% endif %}</li>
+      {% endfor %}
+    </ol>
+  </footer>
+  {% endif %}
+</div>
+</body>
+</html>
