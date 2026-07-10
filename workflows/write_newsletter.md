@@ -104,6 +104,8 @@ This is the **Buffalo Forge & Foundry** newsletter (`tools/brand.json`). Write c
 
 11. **Report back**: the Vercel URL and confirmation the Gmail draft was created (with its ID), explicitly noting it was **not sent**. If a LinkedIn share was requested, also give a raw.githubusercontent.com URL for one strong hero photo plus the Vercel URL and a short suggested caption -- LinkedIn unfurls a preview card from the pasted link automatically, so no separate image host is needed.
 
+12. **Commit and push any workflow/tooling changes.** If this run surfaced a new constraint, gotcha, or better approach and you updated this workflow file and/or files under `tools/` to record it (per the self-improvement loop in `CLAUDE.md`), commit those specific files and `git push` to `origin/main` before finishing -- per standing user instruction (2026-07-10), this doesn't need a separate ask each run. This step only covers workflow/tooling files; it does **not** authorize committing anything else (e.g. don't bundle in unrelated changes), and image/chart publishing is still handled separately by `tools/publish_newsletter_assets.py` in step 5.
+
 ## Notes / things learned
 - Charts always render in light mode only (a PNG can't retheme itself) and sit in a fixed light card frame -- this stays legible even when the web page itself is in dark mode.
 - The email template is intentionally single-theme (light) -- email client dark-mode support is too inconsistent to build against.
